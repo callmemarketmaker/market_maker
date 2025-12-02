@@ -1,0 +1,80 @@
+venues:
+  whitebit_spot:
+    exchange: "whitebit"
+    type: "spot"
+    rest_base_url: "https://api.whitebit.com"
+    ws_base_url: "wss://ws.whitebit.com"
+    api_key: "YOUR_API_KEY"
+    api_secret: "YOUR_SECRET"
+    timeout_ms: 3000
+    max_retries: 3
+
+  whitebit_perp:
+    exchange: "whitebit"
+    type: "perp"
+    rest_base_url: "https://api.whitebit.com"
+    ws_base_url: "wss://ws.whitebit.com"
+    api_key: "YOUR_API_KEY"
+    api_secret: "YOUR_SECRET"
+    timeout_ms: 3000
+    max_retries: 3
+
+engine:
+  refresh_interval_ms: 200            # default
+  max_workers: 4                      # process pool per ML/CPU-bound
+
+risk:
+  global:
+    max_drawdown_usd: 5000
+    max_notional_usd: 100000
+  spot:
+    kill_switch_vol_threshold: 0.15     # 15% move 1m
+  perp:
+    max_leverage: 5.0
+    liquidation_buffer_bps: 300        # distanza minima dalla liquidation in basis points
+
+symbols:
+  "MEME/USDT":
+    venue: "whitebit_spot"
+    enabled: true
+    product_type: "spot"
+    tick_size: 0.000001
+    min_order_size: 100.0
+    base_order_size: 500.0
+    target_spread_ticks: 1
+    levels_per_side: 3
+    refresh_interval_ms: 150
+    aggressiveness:
+      bid_offset_ticks: 0
+      ask_offset_ticks: 0
+      hidden_spread_factor: 0.3
+    inventory:
+      max_base_abs: 500000.0
+      max_inventory_usd: 20000.0
+      max_position_skew: 0.7
+
+  "MEME-PERP":
+    venue: "whitebit_perp"
+    enabled: false           # lo attiveremo in seguito
+    product_type: "perp"
+    tick_size: 0.0001
+    min_order_size: 10.0
+    base_order_size: 50.0
+    target_spread_ticks: 1
+    levels_per_side: 3
+    leverage: 3.0
+    inventory:
+      max_delta_usd: 20000.0
+      max_leverage: 4.0
+
+metrics:
+  prometheus:
+    enabled: true
+    listen_host: "0.0.0.0"
+    listen_port: 9100
+    path: "/metrics"
+
+logging:
+  level: "INFO"
+  json: true
+  file: "logs/mm_bot.log"
