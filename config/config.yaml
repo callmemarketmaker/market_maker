@@ -1,7 +1,7 @@
 venues:
   whitebit_spot:
     exchange: "whitebit"
-    type: "spot"
+    type: whitebit_spot
     rest_base_url: "https://api.whitebit.com"
     ws_base_url: "wss://ws.whitebit.com"
     api_key: "YOUR_API_KEY"
