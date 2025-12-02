@@ -462,6 +462,89 @@ class WhitebitSpotClient(ExchangeClient):
 
         return orders
 
+    async def get_order_history(
+        self,
+        symbol: str,
+        status: str | None = "FILLED",
+        limit: int = 100,
+        offset: int = 0,
+        client_order_id: str | None = None,
+    ) -> list[Order]:
+        """
+        Storico ordini eseguiti / chiusi per un simbolo via:
+        /api/v4/trade-account/order/history
+
+        - status: se valorizzato (es. "FILLED", "CANCELED"), filtra lato client.
+        - limit/offset: paginazione base.
+        - client_order_id: se passato, filtra lato server per quello specifico ID.
+        """
+        market = self._to_market(symbol)
+
+        body: dict[str, Any] = {
+            "market": market,
+            "limit": limit,
+            "offset": offset,
+        }
+        if client_order_id:
+            body["clientOrderId"] = client_order_id
+
+        self.logger.debug(
+            "Query order history",
+            extra={
+                "symbol": symbol,
+                "market": market,
+                "status_filter": status,
+                "limit": limit,
+                "offset": offset,
+                "clientOrderId": client_order_id,
+            },
+        )
+
+        resp = await self._signed_request("/api/v4/trade-account/order/history", body=body)
+
+        records = resp.get("records", [])
+        orders: list[Order] = []
+
+        for item in records:
+            try:
+                if item.get("market") != market:
+                    continue
+
+                item_status = item.get("status", "").upper()
+                if status is not None and item_status != status.upper():
+                    # filtriamo lato client per status
+                    continue
+
+                order_id = str(item["orderId"])
+                side_str = item["side"]
+                side = Side.BUY if side_str.lower() == "buy" else Side.SELL
+
+                price = float(item["price"])
+                amount_total = float(item["amount"])
+                filled = float(item.get("dealStock", "0"))
+                ts = float(item.get("timestamp", time.time()))
+
+                orders.append(
+                    Order(
+                        id=order_id,
+                        symbol=symbol,
+                        side=side,
+                        price=price,
+                        amount=amount_total,
+                        filled=filled,
+                        status=item_status.lower(),
+                        ts=ts,
+                    )
+                )
+            except Exception as e:
+                self.logger.warning(
+                    "Failed to parse order history record",
+                    extra={"raw": item, "error": str(e)},
+                )
+                continue
+
+        return orders
+
     async def place_limit_order(
         self,
         symbol: str,
